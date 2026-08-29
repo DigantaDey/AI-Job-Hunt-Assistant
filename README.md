@@ -27,7 +27,9 @@ this implementation against your full specs.
 | **CV Library** | Master CV + AI-tailored versions; reuse best match by similarity; download as `.docx` |
 | **Answer Memory** | Reuse saved answers by category (`SAFE`, `USER_APPROVED`, `AI_SUGGESTED`, `SENSITIVE`); sensitive questions always require your confirmation |
 | **Credential Vault** | Encrypted (AES-256-GCM) storage for account-creation credentials |
-| **Settings** | Candidate profile, search criteria (skills, titles, locations, salary, freshness, autonomy mode), AI provider config, full JSON export |
+| **Chrome extension** | Reads jobs on LinkedIn/Naukri/Indeed (and any site) and sends them to the local app — supervised & read-only |
+| **Continuous mode** | Background queue worker (instrumentation) with pause/resume, daily application caps, retries, and CV tailoring in-flow |
+| **Settings** | Candidate profile, search criteria (skills, titles, locations, salary, freshness, autonomy mode), AI provider config, scheduler controls, full JSON export |
 
 **Autonomy modes** (per your plan): `assist` · `smart_apply` (default) ·
 `supervised_auto` · `continuous`.
@@ -80,6 +82,28 @@ npm run build && npm run start
 
 Leave everything on `mock` to explore the UI without any keys.
 
+### Chrome extension (optional but recommended)
+
+Reads job posts and sends them to the app for scoring & queueing.
+
+```bash
+# app running at http://localhost:3000 (npm run dev)
+# 1. chrome://extensions → enable Developer mode
+# 2. Load unpacked → select the extension/ folder
+```
+
+Open a job on LinkedIn/Naukri/Indeed, then click the extension icon →
+**Send to Job Hunt**. See `extension/README.md` for details. It is
+**read-only & supervised** — it never fills or submits forms.
+
+### Continuous-mode scheduler
+
+The app starts a background worker (via Next instrumentation) that advances
+the application queue on an interval, tailoring CVs and enforcing your daily
+cap. Control it in **Settings → Continuous automation** (toggle, interval,
+"Run worker now"), and see the live status on the dashboard. Autonomy mode is
+set in **Settings → Search criteria**.
+
 ---
 
 ## 🗂 Project structure
@@ -100,6 +124,10 @@ src/
     engine/                # scoring.ts (deterministic), ingest.ts, analytics.ts
     export/docx.ts         # .docx generation (pure-JS zip)
     crypto.ts              # AES-256-GCM encryption for secrets
+extension/                 # Chrome extension (MV3) + portal adapters
+  content/portal.js        # LinkedIn / Naukri / Indeed extractors
+  content/generic.js       # generic JSON-LD/meta extractor
+  background.js popup/ icons/
 docs/                      # architecture & spec-mapping docs
 ```
 

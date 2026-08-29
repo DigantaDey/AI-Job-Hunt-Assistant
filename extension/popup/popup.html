@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="logo">⌕</div>
+        <div>
+          <h1>Job Hunt Assistant</h1>
+          <p class="tag">Chrome extension</p>
+        </div>
+        <span id="status-dot" class="dot dot-grey" title="connection"></span>
+      </header>
+
+      <section class="current" id="current">
+        <p class="empty">Open a job page on LinkedIn, Naukri, Indeed (or any site) to extract it.</p>
+      </section>
+
+      <section class="controls">
+        <button id="extract" class="btn btn-primary">Extract this page</button>
+        <button id="send" class="btn btn-primary">Send to Job Hunt</button>
+      </section>
+      <p id="result-msg" class="result"></p>
+
+      <footer>
+        <label class="row">
+          <input type="checkbox" id="autosend" />
+          <span>Auto-send when a job is detected</span>
+        </label>
+        <label class="row">
+          <span>Local service URL</span>
+          <input id="api" type="text" value="http://localhost:3000" />
+        </label>
+      </footer>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "AI Job Hunt Assistant",
+  "version": "0.1.0",
+  "description": "Extract jobs from LinkedIn, Naukri, Indeed and other job pages and send them to your local Job Hunt Assistant for scoring, CV tailoring and assisted applications.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "*://*.linkedin.com/*",
+    "*://*.naukri.com/*",
+    "*://*.indeed.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/jobs/*",
+        "*://*.naukri.com/*",
+        "*://*.indeed.com/*",
+        "*://*.indeed.co.in/*"
+      ],
+      "js": ["content/portal.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "AI Job Hunt Assistant",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

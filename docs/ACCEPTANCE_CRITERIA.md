@@ -12,7 +12,7 @@ Status: ✅ implemented in this build · 🚧 planned (next milestone)
 | G4 | Support multiple AI providers without vendor lock-in | ✅ mock/openai/openrouter/ollama/custom |
 | G5 | Track every application, failure, retry, credential, and token | ✅ analytics + TokenUsage + Credential vault |
 | G6 | Keep sensitive data local and exportable | ✅ local JSON store + `/api/export` |
-| G7 | Allow continuous operation with pause/resume & clear user control | 🚧 continuous mode surfaced in config; worker next |
+| G7 | Allow continuous operation with pause/resume & clear user control | ✅ continuous-mode scheduler (instrumentation) + toggle + autonomy modes |
 
 ## Search & matching (FINAL_PLAN §8)
 
@@ -35,7 +35,7 @@ Status: ✅ implemented in this build · 🚧 planned (next milestone)
 | # | Criterion | Status |
 | --- | --- | --- |
 | Q1 | Statuses discovered→qualified→queued→preparing_cv→ready→applying→waiting_for_user→submitted/skipped/failed/retry_scheduled | ✅ full enum + board |
-| Q2 | Pause/resume, prioritization, rate limiting, retries, human checkpoints, traceability | ✅ statuses + error + confidence; 🚧 scheduler |
+| Q2 | Pause/resume, prioritization, rate limiting, retries, human checkpoints, traceability | ✅ statuses + scheduler (rate limit, retry, checkpoints, transitions log) |
 
 ## Answer memory (FINAL_PLAN §11)
 
@@ -66,6 +66,27 @@ Status: ✅ implemented in this build · 🚧 planned (next milestone)
 | # | Criterion | Status |
 | --- | --- | --- |
 | AN1 | Applied/failed/skipped/waiting counts, portal & company-wise, daily trend, score distribution, CV usage, token/cost | ✅ dashboard + `/api/analytics` |
+
+## Portal adapters & extension (FINAL_PLAN §5, §16)
+
+| # | Criterion | Status |
+| --- | --- | --- |
+| E1 | Chrome extension extracts jobs from LinkedIn/Naukri/Indeed | ✅ `extension/content/portal.js` |
+| E2 | Generic extraction for any site (JSON-LD/meta) | ✅ `extension/content/generic.js` + on-demand injection |
+| E3 | Extension relays normalized payload to local service | ✅ `background.js` → `POST /api/ingest` |
+| E4 | Server-side adapter contract & validation | ✅ `src/lib/adapters` |
+| E5 | Extension is supervised & read-only (never auto-submits) | ✅ read-only extractors |
+
+## Continuous-mode scheduler (FINAL_PLAN §7, §10, §16)
+
+| # | Criterion | Status |
+| --- | --- | --- |
+| CM1 | Background worker advances the queue on an interval | ✅ `src/lib/scheduler/worker.ts` + instrumentation |
+| CM2 | Respects autonomy mode (smart_apply default; supervised_auto submits only ≥75 confidence) | ✅ |
+| CM3 | Enforces maxApplicationsPerDay | ✅ |
+| CM4 | Human checkpoints: unknown/sensitive → waiting_for_user | ✅ |
+| CM5 | CV tailoring happens in-flow for queued jobs | ✅ |
+| CM6 | Pause/resume + manual "run now" + transitions log | ✅ Settings UI + `/api/worker/tick` |
 
 ## Out of scope (FINAL_PLAN §6) — explicitly NOT built
 

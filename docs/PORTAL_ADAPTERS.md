@@ -26,9 +26,13 @@ interface RawJobInput {
 }
 ```
 
-Because adapters run in a browser/extension context (fetching pages and filling
-forms), the MVP ships **no live scrapers**. The extension will host adapters
-and relay normalized payloads to the local service over its API.
+The DOM extractors are implemented in the Chrome extension
+(`extension/content/portal.js` for LinkedIn/Naukri/Indeed and
+`extension/content/generic.js` for any site via JSON-LD/meta). The extension
+relays a normalized `RawJobInput` payload to the local service over `POST
+/api/ingest`, where it is validated (`src/lib/adapters`) and fed into
+`ingestJob()`. The extension is **supervised and read-only**: it extracts job
+data only and never fills or submits forms; form-filling comes next.
 
 ## Intended adapter contract (next milestone)
 

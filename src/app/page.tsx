@@ -20,9 +20,11 @@ interface Dash {
 
 export default function DashboardPage() {
   const [dash, setDash] = useState<Dash | null>(null);
+  const [worker, setWorker] = useState<any>(null);
 
   useEffect(() => {
     fetch("/api/dashboard").then((r) => r.json()).then(setDash).catch(() => {});
+    fetch("/api/worker/status").then((r) => r.json()).then(setWorker).catch(() => {});
   }, []);
 
   if (!dash) {
@@ -92,6 +94,30 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Automation status */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-ink-900">Automation</h2>
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${worker?.schedulerEnabled === false ? "text-slate-400" : "text-emerald-600"}`}>
+              <span className={`h-2 w-2 rounded-full ${worker?.schedulerEnabled === false ? "bg-slate-300" : "bg-mint"}`} />
+              {worker?.schedulerEnabled === false ? "paused" : "running"}
+            </span>
+          </div>
+          <div className="text-3xl font-bold uppercase text-brand-600 mb-1">{worker?.lastReport?.mode || "—"}</div>
+          <p className="text-xs text-slate-400">autonomy mode</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-lg bg-slate-50 p-2">
+              <p className="text-[11px] text-slate-400">processed</p>
+              <p className="font-semibold">{worker?.lastReport?.processed ?? 0}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-2">
+              <p className="text-[11px] text-slate-400">submitted today</p>
+              <p className="font-semibold">{worker?.lastReport?.submittedToday ?? 0}/{worker?.lastReport?.dailyCap ?? 8}</p>
+            </div>
+          </div>
+          <p className="mt-3 text-[11px] text-slate-400">Last run: {worker?.lastReport ? new Date(worker.lastReport.at).toLocaleTimeString() : "not yet"}</p>
         </div>
       </div>
 

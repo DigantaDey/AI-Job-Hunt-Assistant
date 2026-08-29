@@ -16,17 +16,16 @@ Status legend: ✅ shipped in this build · 🚧 next · ⬜ later
 - ✅ AI provider abstraction (mock/openai/openrouter/ollama/custom) + token accounting
 - ✅ Analytics dashboard + full JSON export
 
-## Next milestone
+## Next milestone (largely shipped)
 
-- 🚧 **Chrome extension shell** that reads job pages and relays normalized
-  `RawJobInput` to the local service
-- 🚧 **Form-inspection engine** (map form fields → answer memory) and
-  application worker with pause/resume + `maxApplicationsPerDay` rate limiting
-- 🚧 **First portal adapter: Naukri quick/easy apply** (after policy +
-  technical validation)
-- 🚧 **LinkedIn adapter**: discovery, analysis, preparation, assisted filling
-  with user confirmation
-- 🚧 **Continuous mode** background scheduler + retry scheduling
+- ✅ **Chrome extension** (`extension/`) that reads job pages on LinkedIn /
+  Naukri / Indeed and relays normalized `RawJobInput` to the local service
+- ✅ **Generic extractor** for arbitrary sites (JSON-LD / meta), injectable on demand
+- ✅ **Continuous-mode background scheduler** (instrumentation) with pause/resume,
+  `maxApplicationsPerDay` rate limiting, retry scheduling, and CV tailoring in-flow
+- ✅ **Server-side adapter contract** (`src/lib/adapters`) + `/api/ingest`
+- 🚧 **Form-inspection engine** (map form fields → answer memory) and assisted
+  form-filling in the extension (currently the extension reads; filling is next)
 - 🚧 **HUMAN_UPLOADED CV** import + parsing (PDF/DOCX upload)
 
 ## Later

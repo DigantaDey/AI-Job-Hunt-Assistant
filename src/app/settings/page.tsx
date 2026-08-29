@@ -34,6 +34,10 @@ export default function SettingsPage() {
   const [cfg, setCfg] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   const [providerForm, setProviderForm] = useState({ provider: "mock", model: "", apiKey: "", baseUrl: "" });
+  const [schedulerEnabled, setSchedulerEnabled] = useState(true);
+  const [schedulerInterval, setSchedulerInterval] = useState(20);
+  const [workerStatus, setWorkerStatus] = useState<any>(null);
+  const [running, setRunning] = useState(false);
   const [saved, setSaved] = useState("");
 
   useEffect(() => {
@@ -41,8 +45,40 @@ export default function SettingsPage() {
       fetch("/api/profile").then((r) => r.json()),
       fetch("/api/search-config").then((r) => r.json()),
       fetch("/api/settings").then((r) => r.json()),
-    ]).then(([p, c, s]) => { setProfile(p); setCfg(c); setSettings(s); setProviderForm({ provider: s.provider || "mock", model: s.model || "", apiKey: "", baseUrl: s.baseUrl || "" }); });
+      fetch("/api/worker/status").then((r) => r.json()),
+    ]).then(([p, c, s, w]) => {
+      setProfile(p); setCfg(c); setSettings(s);
+      setProviderForm({ provider: s.provider || "mock", model: s.model || "", apiKey: "", baseUrl: s.baseUrl || "" });
+      setSchedulerEnabled(s.schedulerEnabled !== false);
+      setSchedulerInterval(s.schedulerIntervalSec || 20);
+      setWorkerStatus(w);
+    });
   }, []);
+
+  async function toggleScheduler() {
+    const next = !schedulerEnabled;
+    setSchedulerEnabled(next);
+    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schedulerEnabled: next }) });
+    setSaved(next ? "Scheduler enabled ✓" : "Scheduler paused ✓");
+  }
+
+  async function saveScheduler(e: React.FormEvent) {
+    e.preventDefault();
+    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schedulerIntervalSec: schedulerInterval, schedulerEnabled }) });
+    setSaved("Scheduler settings saved ✓");
+  }
+
+  async function runNow() {
+    setRunning(true);
+    setWorkerStatus(null);
+    try {
+      const r = await fetch("/api/worker/tick", { method: "POST" });
+      setWorkerStatus({ lastReport: await r.json() });
+      setSaved("Worker pass completed ✓");
+    } finally {
+      setRunning(false);
+    }
+  }
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -135,8 +171,64 @@ export default function SettingsPage() {
           <div className="flex justify-end mt-4"><button className="btn-primary">Save provider</button></div>
         </form>
 
-        {/* Export */}
-        <div className="card p-6 flex items-center justify-between">
+          {/* Continuous automation / scheduler */}
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-semibold text-ink-900">Continuous automation</h2>
+              <button
+                type="button"
+                onClick={toggleScheduler}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${schedulerEnabled ? "bg-brand-600" : "bg-slate-300"}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${schedulerEnabled ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mb-4">
+              A background worker advances the application queue on an interval. In <b>smart_apply</b> (default) it
+              prepares everything and stops at <i>needs you</i> for confirmation; in <b>supervised_auto</b> it submits only
+              high-confidence (≥75) applications. Daily application caps are always respected.
+            </p>
+            <form onSubmit={saveScheduler} className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="label">Interval (seconds)</label>
+                <input className="input !w-28" type="number" min={5} value={schedulerInterval}
+                  onChange={(e) => setSchedulerInterval(Number(e.target.value))} />
+              </div>
+              <button type="submit" className="btn-ghost">Save interval</button>
+              <button type="button" className="btn-primary" onClick={runNow} disabled={running}>
+                {running ? "Running…" : "Run worker now"}
+              </button>
+            </form>
+
+            {workerStatus?.lastReport && (
+              <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
+                <div className="flex flex-wrap gap-3 text-xs mb-2">
+                  <span>mode: <b className="uppercase">{workerStatus.lastReport.mode}</b></span>
+                  <span>processed: <b>{workerStatus.lastReport.processed}</b></span>
+                  <span>submitted today: <b>{workerStatus.lastReport.submittedToday}/{workerStatus.lastReport.dailyCap}</b></span>
+                  <span>at: {new Date(workerStatus.lastReport.at).toLocaleTimeString()}</span>
+                </div>
+                {workerStatus.lastReport.transitions.length > 0 ? (
+                  <ul className="space-y-1 text-xs text-slate-600">
+                    {workerStatus.lastReport.transitions.slice(0, 12).map((t: string, i: number) => <li key={i}>→ {t}</li>)}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-slate-400">No transitions this pass.</p>
+                )}
+                {workerStatus.lastReport.errors.length > 0 && (
+                  <ul className="space-y-1 text-xs text-rose-600 mt-2">
+                    {workerStatus.lastReport.errors.map((e: string, i: number) => <li key={i}>⚠ {e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+            <p className="text-[11px] text-slate-400 mt-3">
+              Autonomy mode is set in <b>Search criteria</b>. Scheduler runs server-side on boot via instrumentation.
+            </p>
+          </div>
+
+          {/* Export */}
+          <div className="card p-6 flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-ink-900">Export data</h2>
             <p className="text-xs text-slate-400">Download all your local data (including decrypted credentials) as JSON.</p>

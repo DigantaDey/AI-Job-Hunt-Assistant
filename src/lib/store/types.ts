@@ -212,6 +212,15 @@ export interface Setting {
   model: string;
   apiKeyEncrypted: string;
   baseUrl: string;
+  schedulerEnabled?: boolean;
+  schedulerIntervalSec?: number;
+  lastWorkerRunAt?: string;
+  lastWorkerMode?: string;
+  lastWorkerProcessed?: number;
+  lastWorkerSubmittedToday?: number;
+  lastWorkerDailyCap?: number;
+  lastWorkerTransitions?: string;
+  lastWorkerErrors?: string;
   updatedAt: string;
 }
 
