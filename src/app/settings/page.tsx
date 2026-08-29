@@ -4,6 +4,30 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui";
 import { AUTONOMY_MODES } from "@/lib/store/types";
 
+// Helper function for retrying failed fetch requests
+async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3): Promise<any> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      lastError = error as Error;
+      if (attempt < maxRetries - 1) {
+        // Exponential backoff: 100ms, 200ms, 400ms
+        const delay = Math.pow(2, attempt) * 100;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 function TagEditor({ value, onChange, placeholder }: { value: string[]; onChange: (v: string[]) => void; placeholder: string }) {
   const [input, setInput] = useState("");
   function add() {
@@ -39,42 +63,71 @@ export default function SettingsPage() {
   const [workerStatus, setWorkerStatus] = useState<any>(null);
   const [running, setRunning] = useState(false);
   const [saved, setSaved] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     Promise.all([
-      fetch("/api/profile").then((r) => r.json()),
-      fetch("/api/search-config").then((r) => r.json()),
-      fetch("/api/settings").then((r) => r.json()),
-      fetch("/api/worker/status").then((r) => r.json()),
+      fetchWithRetry("/api/profile").catch(() => null),
+      fetchWithRetry("/api/search-config").catch(() => null),
+      fetchWithRetry("/api/settings").catch(() => ({ provider: "mock", model: "mock", baseUrl: "", schedulerEnabled: true })),
+      fetchWithRetry("/api/worker/status").catch(() => ({})),
     ]).then(([p, c, s, w]) => {
-      setProfile(p); setCfg(c); setSettings(s);
-      setProviderForm({ provider: s.provider || "mock", model: s.model || "", apiKey: "", baseUrl: s.baseUrl || "" });
-      setSchedulerEnabled(s.schedulerEnabled !== false);
-      setSchedulerInterval(s.schedulerIntervalSec || 20);
-      setWorkerStatus(w);
+      setProfile(p || {});
+      setCfg(c || {});
+      setSettings(s || { provider: "mock", model: "mock", baseUrl: "", schedulerEnabled: true });
+      setProviderForm({ provider: s?.provider || "mock", model: s?.model || "", apiKey: "", baseUrl: s?.baseUrl || "" });
+      setSchedulerEnabled(s?.schedulerEnabled !== false);
+      setSchedulerInterval(s?.schedulerIntervalSec || 20);
+      setWorkerStatus(w || {});
+      setIsLoading(false);
+    }).catch((error) => {
+      console.error("Failed to load settings:", error);
+      // Set sensible defaults even on failure
+      setProfile({});
+      setCfg({});
+      setSettings({ provider: "mock", model: "mock", baseUrl: "", schedulerEnabled: true });
+      setProviderForm({ provider: "mock", model: "", apiKey: "", baseUrl: "" });
+      setSchedulerEnabled(true);
+      setSchedulerInterval(20);
+      setWorkerStatus({});
+      setIsLoading(false);
     });
   }, []);
 
   async function toggleScheduler() {
     const next = !schedulerEnabled;
     setSchedulerEnabled(next);
-    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schedulerEnabled: next }) });
-    setSaved(next ? "Scheduler enabled ✓" : "Scheduler paused ✓");
+    try {
+      await fetchWithRetry("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schedulerEnabled: next }) });
+      setSaved(next ? "Scheduler enabled ✓" : "Scheduler paused ✓");
+    } catch (error) {
+      console.error("Failed to toggle scheduler:", error);
+      setSaved("Failed to save scheduler state");
+    }
   }
 
   async function saveScheduler(e: React.FormEvent) {
     e.preventDefault();
-    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schedulerIntervalSec: schedulerInterval, schedulerEnabled }) });
-    setSaved("Scheduler settings saved ✓");
+    try {
+      await fetchWithRetry("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schedulerIntervalSec: schedulerInterval, schedulerEnabled }) });
+      setSaved("Scheduler settings saved ✓");
+    } catch (error) {
+      console.error("Failed to save scheduler:", error);
+      setSaved("Failed to save scheduler settings");
+    }
   }
 
   async function runNow() {
     setRunning(true);
     setWorkerStatus(null);
     try {
-      const r = await fetch("/api/worker/tick", { method: "POST" });
-      setWorkerStatus({ lastReport: await r.json() });
+      const r = await fetchWithRetry("/api/worker/tick", { method: "POST" });
+      setWorkerStatus({ lastReport: r });
       setSaved("Worker pass completed ✓");
+    } catch (error) {
+      console.error("Failed to run worker:", error);
+      setSaved("Failed to run worker");
     } finally {
       setRunning(false);
     }
@@ -82,21 +135,36 @@ export default function SettingsPage() {
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
-    await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profile) });
-    setSaved("Profile saved ✓");
+    try {
+      await fetchWithRetry("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profile) });
+      setSaved("Profile saved ✓");
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+      setSaved("Failed to save profile");
+    }
   }
   async function saveCfg(e: React.FormEvent) {
     e.preventDefault();
-    await fetch("/api/search-config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cfg) });
-    setSaved("Search criteria saved ✓");
+    try {
+      await fetchWithRetry("/api/search-config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cfg) });
+      setSaved("Search criteria saved ✓");
+    } catch (error) {
+      console.error("Failed to save search config:", error);
+      setSaved("Failed to save search criteria");
+    }
   }
   async function saveProvider(e: React.FormEvent) {
     e.preventDefault();
-    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(providerForm) });
-    setSaved("AI provider saved ✓");
+    try {
+      await fetchWithRetry("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(providerForm) });
+      setSaved("AI provider saved ✓");
+    } catch (error) {
+      console.error("Failed to save provider:", error);
+      setSaved("Failed to save AI provider");
+    }
   }
 
-  if (!profile) return <div className="animate-pulse h-40 bg-slate-200 rounded-2xl" />;
+  if (isLoading) return <div className="animate-pulse h-40 bg-slate-200 rounded-2xl" />;
 
   const cfgVal = (v: string[]) => (Array.isArray(v) ? v : []);
 
