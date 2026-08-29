@@ -123,6 +123,12 @@ export interface CVItem {
   matchScore: number;
   usageCount: number;
   version: number;
+  fileName?: string;
+  rawText?: string;
+  extractedProfile?: Partial<Candidate>;
+  aiClassification?: string;
+  uploadedAt?: string;
+  importedToProfile?: boolean;
   createdAt: string;
   updatedAt: string;
 }
